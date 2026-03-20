@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <link href="{{ root_path }}/static/assets/style.css" rel="stylesheet" />
+        {%- if is_admin -%}
+            <link href="{{ root_path }}/static/admin_assets/style.css" rel="stylesheet" />
+            <!-- License for inkjet (https://github.com/gchudnov/inkjet):
+
+            {{ inkjet_license|indent(8) }}
+            -->
+            <script src="{{ root_path }}/static/admin_assets/inkjet.min.js"></script>
+            <script src="{{ root_path }}/static/admin_assets/upload_media_items.js"></script>
+        {%- endif %}
+        <title>Impressionen aus Japan</title>
+    </head>
+    <body>
+        <h1>Impressionen aus Japan</h1>
+        <p>
+            Herzlich willkommen bei unserem kleinen Fotoalbum. Diese Seite enthält eine Sammlung von Fotos und Videos,
+            die wir während unserer Reise nach Japan vom 16.&#x202f;August bis zum 10.&#x202f;September 2026 gemacht
+            haben. Klicke oder tippe auf ein Vorschaubild, um das Foto oder Video in größerer Auflösung zu sehen. Bitte
+            teile nicht die URL dieser Seite, das Passwort oder die Fotos/Videos mit anderen Personen. Vielen Dank!
+        </p>
+        <p>Letzte Aktualisierung: {{ last_updated_at.strftime('%Y-%m-%d %H:%M') }}</p>
+        {% if is_admin %}
+            {% include 'admin_integrity_problems.html.jinja' %}
+        {% endif %}
+        {% for section in sections if is_admin or section.media_items %}
+            {% if is_admin %}
+                {% with section_order_index=section.order_index %}
+                    {% include 'admin_add_new_section.html.jinja' %}
+                {% endwith %}
+            {% endif %}
+            <h2 id="{{ section.slug }}">
+                {{ section.name }}
+                {% if is_admin %}
+                    (ID {{ section.id }})
+                {% endif %}
+            </h2>
+            {% if is_admin %}
+                {% include 'admin_section_controls.html.jinja' %}
+            {% endif %}
+            {% include 'media.html.jinja' %}
+            {% if is_admin %}
+                {# prettier-ignore-start #}
+                </form>
+                {# prettier-ignore-end #}
+            {% endif %}
+        {% endfor %}
+        {% if is_admin %}
+            {% with section_order_index=sections|length %}
+                {% include 'admin_add_new_section.html.jinja' %}
+            {% endwith %}
+        {% endif %}
+        <p class="footer">
+            Copyright&nbsp;&copy;&nbsp;2026 Julian&nbsp;Valentin,&nbsp;Emma&nbsp;Feege.
+            Alle&nbsp;Rechte&nbsp;vorbehalten.
+        </p>
+    </body>
+</html>

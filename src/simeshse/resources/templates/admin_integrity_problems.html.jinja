@@ -1,0 +1,42 @@
+{%
+    if integrity_problems and (
+        integrity_problems.section_order_index_problems|length or
+        integrity_problems.media_section_id_problems|length or
+        integrity_problems.media_file_not_found_problems|length or
+        integrity_problems.media_item_not_found_problems|length
+    )
+%}
+    <h2>Integrity Problems Detected!</h2>
+    <ul>
+        {% for problem in integrity_problems.section_order_index_problems %}
+            <li>
+                Section ID {{ problem.section.id }} (&ldquo;{{ problem.section.name }}&rdquo;) has order index
+                {{ problem.section.order_index }}, expected {{ problem.expected_order_index }}
+            </li>
+        {% endfor %}
+        {% for problem in integrity_problems.media_section_id_problems %}
+            <li>
+                Media ID {{ problem.media_item.id }} (&ldquo;{{ problem.media_item.caption }}&rdquo;, path
+                <tt>{{ problem.media_item.path.name }}</tt>) has nonexistent section ID
+                {{ problem.media_item.section_id }}
+            </li>
+        {% endfor %}
+        {% for problem in integrity_problems.media_file_not_found_problems %}
+            <li>
+                Media ID {{ problem.media_item.id }} (&ldquo;{{ problem.media_item.caption }}&rdquo;) references these
+                paths that do not exist on disk:
+                <ul>
+                    {% for missing_path in problem.missing_paths %}
+                        <li><tt>{{ missing_path }}</tt></li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% endfor %}
+        {% for problem in integrity_problems.media_item_not_found_problems %}
+            <li>Media file at <tt>{{ problem.path }}</tt> does not have a corresponding media item in the database</li>
+        {% endfor %}
+    </ul>
+    <form action="{{ root_path }}/admin/integrity/fix" method="post">
+        <input type="submit" value="Fix Integrity" />
+    </form>
+{%- endif %}

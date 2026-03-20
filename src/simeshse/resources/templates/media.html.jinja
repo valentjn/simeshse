@@ -1,0 +1,52 @@
+{% if not is_admin %}
+    <p class="media_paragraph"></p>
+{% endif %}
+{% for media_item in section.media_items %}
+    {% if is_admin %}
+        <p class="media_paragraph"></p>
+    {% endif %}
+    <span
+        class="media_container"
+        style="transform:rotate({{ media_item.angle }}deg); z-index:{{ media_item.z_index }};"
+    >
+        <a href="{{ root_path }}/{{ media_item.row.path }}">
+            <img
+                class="media"
+                src="{{ root_path }}/{{ media_item.row.thumbnail_path }}"
+                height="{{ media_item.row.thumbnail_height }}"
+                loading="lazy"
+                width="{{ media_item.row.thumbnail_width }}"
+            />
+            {% if media_item.row.is_video %}
+                <img class="media_play" src="{{ root_path }}/static/assets/play.png" />
+            {% endif %}
+            <span class="media_caption">{{ media_item.row.caption }}</span>
+            <span class="media_creation_time">{{ media_item.row.created_at.strftime('%Y-%m-%d %H:%M') }}</span>
+        </a>
+    </span>
+    {% if is_admin %}
+        {# prettier-ignore-start #}
+        </p>
+        {# prettier-ignore-end #}
+        <input name="media_item_ids" type="hidden" value="{{ media_item.row.id }}" />
+        <table>
+            <tr>
+                <td><label>Caption:</label></td>
+                <td><input name="captions" type="text" value="{{ media_item.row.caption }}" /></td>
+            </tr>
+            <tr>
+                <td><label>Section ID:</label></td>
+                <td><input name="section_ids" type="text" value="{{ media_item.row.section_id }}" /></td>
+            </tr>
+            <tr>
+                <td><label>Delete?</label></td>
+                <td><input name="media_item_ids_to_delete" type="checkbox" value="{{ media_item.row.id }}" /></td>
+            </tr>
+        </table>
+    {% endif %}
+{% endfor %}
+{% if not is_admin %}
+    {# prettier-ignore-start #}
+    </p>
+    {# prettier-ignore-end #}
+{% endif %}

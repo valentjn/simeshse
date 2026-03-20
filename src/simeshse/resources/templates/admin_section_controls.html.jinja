@@ -1,0 +1,45 @@
+<div class="form_container">
+    <form action="{{ root_path }}/admin/sections/{{ section.id }}/rename" method="post">
+        <label>Name:</label>
+        <input name="name" type="text" value="{{ section.name }}" />
+        <input type="submit" value="Rename Section" />
+    </form>
+    <form action="{{ root_path }}/admin/sections/{{ section.id }}/move?direction=up" method="post">
+        <input type="submit" value="Move Section Up" />
+    </form>
+    <form action="{{ root_path }}/admin/sections/{{ section.id }}/move?direction=down" method="post">
+        <input type="submit" value="Move Section Down" />
+    </form>
+    <form
+        action="{{ root_path }}/admin/sections/{{ section.id }}/delete"
+        method="post"
+        onsubmit="return confirm('Are you sure you want to delete this section?');"
+    >
+        <input
+            {% if section.media_items %}
+                disabled="disabled"
+            {% endif %}
+            type="submit"
+            value="Delete Section"
+        />
+    </form>
+</div>
+<form id="upload_form_{{ section.id }}" action="javascript:uploadMediaItems('{{ root_path }}', {{ section.id }})">
+    <fieldset id="upload_fieldset_{{ section.id }}">
+        <label>Files:</label>
+        <input id="to_be_uploaded_file_input_{{ section.id }}" multiple="multiple" type="file" />
+        <input type="submit" value="Upload Media Items" />
+    </fieldset>
+</form>
+<form action="{{ root_path }}/admin/sections/{{ section.id }}/media-items" method="post">
+    <button name="action" type="submit" value="update_captions">Update Captions</button>
+    <button name="action" type="submit" value="update_sections">Update Sections</button>
+    <button
+        name="action"
+        onclick="return confirm('Are you sure you want to delete these media items?');"
+        type="submit"
+        value="delete"
+    >
+        Delete Media Items
+    </button>
+</form>

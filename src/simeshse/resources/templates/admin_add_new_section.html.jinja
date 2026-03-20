@@ -1,0 +1,7 @@
+<h2>Add New Section Here</h2>
+<form action="{{ root_path }}/admin/sections" method="post">
+    <label>Name:</label>
+    <input name="name" type="text" />
+    <input name="order_index" type="hidden" value="{{ section_order_index }}" />
+    <input type="submit" value="Add New Section" />
+</form>
