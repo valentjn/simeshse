@@ -31,15 +31,16 @@
         <input type="submit" value="Upload Media Items" />
     </fieldset>
 </form>
+{# prettier-ignore-start #}
 <form action="{{ root_path }}/admin/sections/{{ section.id }}/media-items" method="post">
-    <button name="action" type="submit" value="update_captions">Update Captions</button>
-    <button name="action" type="submit" value="update_sections">Update Sections</button>
-    <button
-        name="action"
-        onclick="return confirm('Are you sure you want to delete these media items?');"
-        type="submit"
-        value="delete"
-    >
-        Delete Media Items
-    </button>
-</form>
+{# prettier-ignore-end #}
+<button name="action" type="submit" value="update_captions">Update Captions</button>
+<button name="action" type="submit" value="update_sections">Update Sections</button>
+<button
+    name="action"
+    onclick="return confirm('Are you sure you want to delete these media items?');"
+    type="submit"
+    value="delete"
+>
+    Delete Media Items
+</button>

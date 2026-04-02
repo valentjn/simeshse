@@ -1,9 +1,13 @@
 {% if not is_admin %}
-    <p class="media_paragraph"></p>
+    {# prettier-ignore-start #}
+    <p class="media_paragraph">
+    {# prettier-ignore-end #}
 {% endif %}
 {% for media_item in section.media_items %}
     {% if is_admin %}
-        <p class="media_paragraph"></p>
+        {# prettier-ignore-start #}
+        <p class="media_paragraph">
+        {# prettier-ignore-end #}
     {% endif %}
     <span
         class="media_container"
