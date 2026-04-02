@@ -330,6 +330,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
         media_item_ids_to_delete: Annotated[list[int] | None, Form()] = None,
     ) -> RedirectResponse:
         """Update media items based on the specified action."""
+        _logger.debug("updating media items %s with action %s", media_item_ids, action)
         paths_to_delete = []
         match action:
             case MediaItemAction.UPDATE_CAPTIONS:
@@ -356,7 +357,7 @@ def set_up_logging() -> None:
     package_logger = logging.getLogger("simeshse")
     if package_logger.hasHandlers():
         return
-    package_logger.setLevel(logging.INFO)
+    package_logger.setLevel(logging.DEBUG)
     handler = logging.StreamHandler()
     handler.setFormatter(logging.Formatter("%(message)s"))
     package_logger.addHandler(handler)
