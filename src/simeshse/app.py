@@ -172,19 +172,20 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
 
     @app.post("/admin/integrity/fix")
     @acquire_lock(lock)
-    async def fix_integrity_problems(db_session: DatabaseSessionDep) -> RedirectResponse:
+    async def fix_integrity_problems(db_session: DatabaseSessionDep, request: Request) -> RedirectResponse:
         """Fix integrity problems in the database and on disk."""
         _logger.info("checking for integrity problems")
         problems = await database.IntegrityProblems.check(db_session, settings.data_dir)
         _logger.info("fixing integrity problems")
         await problems.fix(db_session, settings.data_dir)
         await db_session.commit()
-        return redirect_to_admin(section=None)
+        return redirect_to_admin(request, section=None)
 
     @app.put("/admin/sections/{section_id}/media-items")
     @acquire_lock(lock)
     async def add_media_items(
         db_session: DatabaseSessionDep,
+        request: Request,
         section_id: int,
         files: list[UploadFile],
         created_ats: Annotated[str | None, Form()] = None,
@@ -224,7 +225,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
                 )
                 db_session.add(media_item)
         response = AddMediaItemsResponse(
-            redirect_url=get_admin_redirect_url(section=await db_session.get(database.Section, section_id))
+            redirect_url=get_admin_redirect_url(request, section=await db_session.get(database.Section, section_id))
         )
         await db_session.commit()
         return response
@@ -233,6 +234,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
     @acquire_lock(lock)
     async def add_section(
         db_session: DatabaseSessionDep,
+        request: Request,
         *,
         name: Annotated[str | None, Form()] = None,
         order_index: Annotated[int, Form()],
@@ -244,14 +246,14 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
         section = database.Section(name=name or "", order_index=order_index)
         _logger.info("adding section with name %s and order_index %d", section.name, section.order_index)
         db_session.add(section)
-        response = redirect_to_admin(section=section)
+        response = redirect_to_admin(request, section=section)
         await db_session.commit()
         return response
 
     @app.post("/admin/sections/{section_id}/rename")
     @acquire_lock(lock)
     async def rename_section(
-        db_session: DatabaseSessionDep, section_id: int, name: Annotated[str | None, Form()] = None
+        db_session: DatabaseSessionDep, request: Request, section_id: int, name: Annotated[str | None, Form()] = None
     ) -> RedirectResponse:
         """Rename a section."""
         section = await db_session.get(database.Section, section_id)
@@ -259,13 +261,15 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"section {section_id} not found")
         section.name = name or ""
         _logger.info("renaming section ID %d to %s", section_id, section.name)
-        response = redirect_to_admin(section=section)
+        response = redirect_to_admin(request, section=section)
         await db_session.commit()
         return response
 
     @app.post("/admin/sections/{section_id}/move")
     @acquire_lock(lock)
-    async def move_section(db_session: DatabaseSessionDep, section_id: int, direction: Direction) -> RedirectResponse:
+    async def move_section(
+        db_session: DatabaseSessionDep, request: Request, section_id: int, direction: Direction
+    ) -> RedirectResponse:
         """Move a section up or down."""
         section = await db_session.get(database.Section, section_id)
         if not section:
@@ -289,7 +293,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
                 ).first()
             case _:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"invalid direction {direction}")
-        response = redirect_to_admin(section=section)
+        response = redirect_to_admin(request, section=section)
         if swap_section:
             section.order_index, swap_section.order_index = swap_section.order_index, section.order_index
             _logger.info("swapping section ID %d with section ID %d", section.id, swap_section.id)
@@ -298,7 +302,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
 
     @app.post("/admin/sections/{section_id}/delete")
     @acquire_lock(lock)
-    async def delete_section(db_session: DatabaseSessionDep, section_id: int) -> RedirectResponse:
+    async def delete_section(db_session: DatabaseSessionDep, request: Request, section_id: int) -> RedirectResponse:
         """Delete a section."""
         section = await db_session.get(database.Section, section_id)
         if not section:
@@ -311,12 +315,13 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
         _logger.info("deleting section ID %d with name %s", section_id, section.name)
         await db_session.delete(section)
         await db_session.commit()
-        return redirect_to_admin(section=None)
+        return redirect_to_admin(request, section=None)
 
     @app.post("/admin/sections/{section_id}/media-items")
     @acquire_lock(lock)
     async def update_media_items(  # noqa: PLR0913
         db_session: DatabaseSessionDep,
+        request: Request,
         section_id: int,
         action: Annotated[MediaItemAction, Form()],
         media_item_ids: Annotated[list[int] | None, Form()] = None,
@@ -335,7 +340,7 @@ def create_app() -> FastAPI:  # noqa: C901, PLR0915
                 paths_to_delete += await delete_media(db_session, media_item_ids_to_delete)
             case _:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"invalid action {action}")
-        response = redirect_to_admin(section=await db_session.get(database.Section, section_id))
+        response = redirect_to_admin(request, section=await db_session.get(database.Section, section_id))
         await db_session.commit()
         for path in paths_to_delete:
             _logger.info("deleting file at path %s because its media item was deleted", path)
@@ -405,21 +410,30 @@ async def delete_media(db_session: AsyncSession, media_item_ids: Sequence[int] |
 
 def is_admin(request: Request) -> bool:
     """Check if the request is for an admin page."""
-    root_path = request.scope.get("root_path", "")
+    root_path = get_root_path(request)
     return request.url.path == f"{root_path}/admin" or request.url.path.startswith(f"{root_path}/admin/")
 
 
-def redirect_to_admin(*, section: database.Section | None) -> RedirectResponse:
+def redirect_to_admin(request: Request, *, section: database.Section | None) -> RedirectResponse:
     """Redirect to the admin page, optionally with a section anchor."""
-    return RedirectResponse(url=get_admin_redirect_url(section=section), status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(url=get_admin_redirect_url(request, section=section), status_code=status.HTTP_303_SEE_OTHER)
 
 
-def get_admin_redirect_url(*, section: database.Section | None) -> str:
+def get_admin_redirect_url(request: Request, *, section: database.Section | None) -> str:
     """Get the URL to redirect to the admin page, optionally with a section anchor."""
-    url = "/admin"
+    url = f"{get_root_path(request)}/admin"
     if section:
         url += f"#{slugify(section.name)}"
     return url
+
+
+def get_root_path(request: Request) -> str:
+    """Get the root path from a request."""
+    root_path = request.scope.get("root_path", "")
+    if not isinstance(root_path, str):
+        msg = f"root_path must be str, got: {type(root_path).__name__}"
+        raise TypeError(msg)
+    return root_path
 
 
 def get_templates() -> Jinja2Templates:
