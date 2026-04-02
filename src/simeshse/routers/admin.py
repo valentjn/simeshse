@@ -330,6 +330,6 @@ def acquire_lock[**P, R](lock: asyncio.Lock) -> Callable[[Callable[P, Awaitable[
             async with lock:
                 return await func(*args, **kwargs)  # ty: ignore[invalid-return-type, invalid-argument-type]
 
-        return wrapper  # ty:ignore[invalid-return-type]
+        return wrapper  # ty: ignore[invalid-return-type]
 
-    return decorator  # ty:ignore[invalid-return-type]
+    return decorator  # ty: ignore[invalid-return-type]
