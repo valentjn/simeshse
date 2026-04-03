@@ -8,7 +8,7 @@
 import asyncio
 import json
 import logging
-from datetime import UTC, datetime
+from datetime import UTC, datetime, timedelta
 from enum import StrEnum, auto
 from functools import wraps
 from pathlib import Path
@@ -321,13 +321,15 @@ def get_admin_redirect_url(request: Request, *, section: database.Section | None
     return url
 
 
-def acquire_lock[**P, R](lock: asyncio.Lock) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
-    """Wrap a function to acquire the lock before executing and release it afterwards."""
+def acquire_lock[**P, R](
+    lock: asyncio.Lock, timeout: timedelta = timedelta(seconds=300.0)
+) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
+    """Wrap a function to acquire a lock before executing and release it afterwards, including a timeout."""
 
     def decorator(func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
         @wraps(func)
         async def wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
-            async with lock:
+            async with asyncio.timeout(timeout.total_seconds()), lock:
                 return await func(*args, **kwargs)  # ty: ignore[invalid-return-type, invalid-argument-type]
 
         return wrapper  # ty: ignore[invalid-return-type]
