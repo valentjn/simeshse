@@ -32,7 +32,7 @@ _logger = logging.getLogger(__name__)
 
 def create_app() -> FastAPI:
     """Create and configure the FastAPI application."""
-    set_up_logging()
+    _set_up_logging()
     settings = Settings()  # type: ignore[call-arg]  # ty: ignore[missing-argument]
     engine = database.create_engine(settings.data_dir)
     create_directories(settings.data_dir)
@@ -68,7 +68,7 @@ def create_app() -> FastAPI:
     return app
 
 
-def set_up_logging() -> None:
+def _set_up_logging() -> None:
     """Set up logging for the application."""
     package_logger = logging.getLogger("simeshse")
     if package_logger.hasHandlers():

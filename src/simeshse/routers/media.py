@@ -32,7 +32,7 @@ _logger = logging.getLogger(__name__)
 
 
 @dataclass(kw_only=True)
-class DisplayedMediaItem:
+class _DisplayedMediaItem:
     """Media item with additional information for display in the UI."""
 
     row: database.MediaItem
@@ -51,7 +51,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
     @router.get(ADMIN_PREFIX, response_class=HTMLResponse)
     async def get_media(
         db_session: database_session_type,
-        templates: TemplatesDep,
+        templates: _TemplatesDep,
         request: Request,
     ) -> HTMLResponse:
         """Render the main page."""
@@ -77,7 +77,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
                 "slug": slugify(section.name),
                 "order_index": section.order_index,
                 "media_items": [
-                    DisplayedMediaItem(row=media_item, angle=random.gauss(0.0, 3.0), z_index=1_000_000 - idx)
+                    _DisplayedMediaItem(row=media_item, angle=random.gauss(0.0, 3.0), z_index=1_000_000 - idx)
                     for idx, media_item in enumerate(section_id_to_media_items[section.id])
                 ],
             }
@@ -97,7 +97,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
     return router
 
 
-def get_templates() -> Jinja2Templates:
+def _get_templates() -> Jinja2Templates:
     """Get the ``Jinja2Templates`` instance for rendering templates."""
     environment = jinja2.Environment(
         loader=jinja2.FileSystemLoader(get_resources_dir() / "templates"),
@@ -107,4 +107,4 @@ def get_templates() -> Jinja2Templates:
     return Jinja2Templates(env=environment)
 
 
-type TemplatesDep = Annotated[Jinja2Templates, Depends(get_templates)]
+type _TemplatesDep = Annotated[Jinja2Templates, Depends(_get_templates)]

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from logging import getLogger
 from pathlib import Path
-from shutil import copyfile, which
+from shutil import copyfile
 from tempfile import TemporaryDirectory
 from typing import TYPE_CHECKING, Any
 from uuid import UUID, uuid4
@@ -38,7 +38,7 @@ class Size:
 
 
 @dataclass
-class TargetSize:
+class _TargetSize:
     """Target size for rescaling an image or video.
 
     At least one of width or height must not be ``None``. The aspect ratio of the media item is preserved if only one of
@@ -73,22 +73,9 @@ class MediaItem:
     """Size of the thumbnail."""
 
 
-def check_dependencies() -> None:
-    """Check if the required dependencies for media preprocessing are available."""
-    missing = [dep for dep in ["ffmpeg", "ffprobe"] if not _is_dependency_available(dep)]
-    if missing:
-        msg = f"could not find dependenc{'y' if len(missing) == 1 else 'ies'}: {', '.join(missing)}"
-        raise RuntimeError(msg)
-
-
-def _is_dependency_available(name: str) -> bool:
-    """Return whether the given dependency is available on the system."""
-    return which(name) is not None
-
-
-_MEDIA_IMAGE_TARGET_SIZE = TargetSize(4096, 4096)
-_MEDIA_VIDEO_TARGET_SIZE = TargetSize(768, 768)
-_THUMBNAIL_TARGET_SIZE = TargetSize(None, 256)
+_MEDIA_IMAGE_TARGET_SIZE = _TargetSize(4096, 4096)
+_MEDIA_VIDEO_TARGET_SIZE = _TargetSize(768, 768)
+_THUMBNAIL_TARGET_SIZE = _TargetSize(None, 256)
 
 
 async def preprocess(*, input_path: Path, data_dir: Path, created_at: datetime | None = None) -> MediaItem:
@@ -148,7 +135,7 @@ def _format_filename(created_at: datetime, uuid: UUID, suffix: str) -> str:
     return f"{created_at.strftime('%Y-%m-%d_%H-%M-%S')}_{uuid}{suffix}"
 
 
-def _rescale_image(input_path: Path, output_path: Path, target_size: TargetSize, *, quality: int = 95) -> Size:
+def _rescale_image(input_path: Path, output_path: Path, target_size: _TargetSize, *, quality: int = 95) -> Size:
     """Rescale the given image to the target size and save it to the output path."""
     _logger.info("rescaling image")
     with Image.open(input_path) as image:
@@ -164,7 +151,7 @@ def _rescale_image(input_path: Path, output_path: Path, target_size: TargetSize,
         return rescaled_size
 
 
-async def _rescale_video(input_path: Path, output_path: Path, target_size: TargetSize) -> Size:
+async def _rescale_video(input_path: Path, output_path: Path, target_size: _TargetSize) -> Size:
     """Rescale the given video to the target size and save it to the output path."""
     _logger.info("rescaling video")
     rescaled_width_height_divisor = 2
@@ -265,7 +252,7 @@ async def _run_command(*arguments: str | Path) -> bytes:
     return stdout
 
 
-def _scale_to_maximum_width_or_height(input_size: Size, target_size: TargetSize) -> Size:
+def _scale_to_maximum_width_or_height(input_size: Size, target_size: _TargetSize) -> Size:
     """Scale the input size to fit within the target size while preserving the aspect ratio."""
     input_aspect_ratio = input_size.width / input_size.height
     if target_size.width is not None:

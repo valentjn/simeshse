@@ -68,7 +68,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
     lock = asyncio.Lock()
 
     @router.post("/integrity/fix")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def fix_integrity_problems(db_session: database_session_type, request: Request) -> RedirectResponse:
         """Fix integrity problems in the database and on disk."""
         _logger.info("checking for integrity problems")
@@ -76,10 +76,10 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
         _logger.info("fixing integrity problems")
         await problems.fix(db_session, settings.data_dir)
         await db_session.commit()
-        return redirect_to_admin(request, section=None)
+        return _redirect_to_admin(request, section=None)
 
     @router.put("/sections/{section_id}/media-items")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def add_media_items(
         db_session: database_session_type,
         request: Request,
@@ -122,13 +122,13 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
                 )
                 db_session.add(media_item)
         response = AddMediaItemsResponse(
-            redirect_url=get_admin_redirect_url(request, section=await db_session.get(database.Section, section_id))
+            redirect_url=_get_admin_redirect_url(request, section=await db_session.get(database.Section, section_id))
         )
         await db_session.commit()
         return response
 
     @router.post("/sections")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def add_section(
         db_session: database_session_type,
         request: Request,
@@ -143,12 +143,12 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
         section = database.Section(name=name or "", order_index=order_index)
         _logger.info("adding section with name %s and order_index %d", section.name, section.order_index)
         db_session.add(section)
-        response = redirect_to_admin(request, section=section)
+        response = _redirect_to_admin(request, section=section)
         await db_session.commit()
         return response
 
     @router.post("/sections/{section_id}/rename")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def rename_section(
         db_session: database_session_type,
         request: Request,
@@ -161,12 +161,12 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"section {section_id} not found")
         section.name = name or ""
         _logger.info("renaming section ID %d to %s", section_id, section.name)
-        response = redirect_to_admin(request, section=section)
+        response = _redirect_to_admin(request, section=section)
         await db_session.commit()
         return response
 
     @router.post("/sections/{section_id}/move")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def move_section(
         db_session: database_session_type, request: Request, section_id: int, direction: Direction
     ) -> RedirectResponse:
@@ -193,7 +193,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
                 ).first()
             case _:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"invalid direction {direction}")
-        response = redirect_to_admin(request, section=section)
+        response = _redirect_to_admin(request, section=section)
         if swap_section:
             section.order_index, swap_section.order_index = swap_section.order_index, section.order_index
             _logger.info("swapping section ID %d with section ID %d", section.id, swap_section.id)
@@ -201,7 +201,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
         return response
 
     @router.post("/sections/{section_id}/delete")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def delete_section(db_session: database_session_type, request: Request, section_id: int) -> RedirectResponse:
         """Delete a section."""
         section = await db_session.get(database.Section, section_id)
@@ -215,10 +215,10 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
         _logger.info("deleting section ID %d with name %s", section_id, section.name)
         await db_session.delete(section)
         await db_session.commit()
-        return redirect_to_admin(request, section=None)
+        return _redirect_to_admin(request, section=None)
 
     @router.post("/sections/{section_id}/media-items")
-    @acquire_lock(lock)
+    @_acquire_lock(lock)
     async def update_media_items(  # noqa: PLR0913
         db_session: database_session_type,
         request: Request,
@@ -234,14 +234,14 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
         paths_to_delete = []
         match action:
             case MediaItemAction.UPDATE_CAPTIONS:
-                await update_captions(db_session, media_item_ids, captions)
+                await _update_captions(db_session, media_item_ids, captions)
             case MediaItemAction.UPDATE_SECTIONS:
-                await update_sections(db_session, media_item_ids, section_ids)
+                await _update_sections(db_session, media_item_ids, section_ids)
             case MediaItemAction.DELETE:
-                paths_to_delete += await delete_media(db_session, media_item_ids_to_delete)
+                paths_to_delete += await _delete_media(db_session, media_item_ids_to_delete)
             case _:
                 raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"invalid action {action}")
-        response = redirect_to_admin(request, section=await db_session.get(database.Section, section_id))
+        response = _redirect_to_admin(request, section=await db_session.get(database.Section, section_id))
         await db_session.commit()
         for path in paths_to_delete:
             _logger.info("deleting file at path %s because its media item was deleted", path)
@@ -251,18 +251,7 @@ def create_router(settings: Settings, database_session_type: Any) -> APIRouter: 
     return router
 
 
-def set_up_logging() -> None:
-    """Set up logging for the application."""
-    package_logger = logging.getLogger("simeshse")
-    if package_logger.hasHandlers():
-        return
-    package_logger.setLevel(logging.DEBUG)
-    handler = logging.StreamHandler()
-    handler.setFormatter(logging.Formatter("%(message)s"))
-    package_logger.addHandler(handler)
-
-
-async def update_captions(
+async def _update_captions(
     db_session: AsyncSession, media_item_ids: Sequence[int] | None, captions: Sequence[str] | None
 ) -> None:
     """Update captions of media items."""
@@ -274,7 +263,7 @@ async def update_captions(
         media_item.caption = caption
 
 
-async def update_sections(
+async def _update_sections(
     db_session: AsyncSession, media_item_ids: Sequence[int] | None, section_ids: Sequence[int] | None
 ) -> None:
     """Move media items to another section."""
@@ -289,7 +278,7 @@ async def update_sections(
         media_item.section_id = section_id
 
 
-async def delete_media(db_session: AsyncSession, media_item_ids: Sequence[int] | None) -> list[Path]:
+async def _delete_media(db_session: AsyncSession, media_item_ids: Sequence[int] | None) -> list[Path]:
     """Delete media items."""
     paths_to_delete = []
     for media_item_id in media_item_ids or []:
@@ -308,12 +297,14 @@ async def delete_media(db_session: AsyncSession, media_item_ids: Sequence[int] |
     return paths_to_delete
 
 
-def redirect_to_admin(request: Request, *, section: database.Section | None) -> RedirectResponse:
+def _redirect_to_admin(request: Request, *, section: database.Section | None) -> RedirectResponse:
     """Redirect to the admin page, optionally with a section anchor."""
-    return RedirectResponse(url=get_admin_redirect_url(request, section=section), status_code=status.HTTP_303_SEE_OTHER)
+    return RedirectResponse(
+        url=_get_admin_redirect_url(request, section=section), status_code=status.HTTP_303_SEE_OTHER
+    )
 
 
-def get_admin_redirect_url(request: Request, *, section: database.Section | None) -> str:
+def _get_admin_redirect_url(request: Request, *, section: database.Section | None) -> str:
     """Get the URL to redirect to the admin page, optionally with a section anchor."""
     url = f"{get_root_path(request)}{ADMIN_PREFIX}"
     if section:
@@ -321,7 +312,7 @@ def get_admin_redirect_url(request: Request, *, section: database.Section | None
     return url
 
 
-def acquire_lock[**P, R](
+def _acquire_lock[**P, R](
     lock: asyncio.Lock, timeout: timedelta = timedelta(seconds=300.0)
 ) -> Callable[[Callable[P, Awaitable[R]]], Callable[P, Awaitable[R]]]:
     """Wrap a function to acquire a lock before executing and release it afterwards, including a timeout."""
