@@ -8,7 +8,7 @@
 import logging
 from contextlib import asynccontextmanager
 from functools import partial
-from traceback import format_exc, print_exc
+from traceback import format_exc
 from typing import TYPE_CHECKING, Annotated
 
 from fastapi import Depends, FastAPI, Request, Response, status
@@ -55,7 +55,7 @@ def create_app() -> FastAPI:
             return await call_next(request)
         except Exception:
             if is_admin(request):
-                print_exc()
+                _logger.exception("exception during admin request")
                 return PlainTextResponse("".join(format_exc()), status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
             raise
 
