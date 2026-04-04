@@ -8,4 +8,5 @@
 .mypy_cache/
 .venv/
 *.mp3
+db/
 old/
