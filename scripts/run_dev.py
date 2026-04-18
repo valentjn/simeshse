@@ -50,7 +50,11 @@ async def main() -> None:
 
 
 async def download_example_media_items(data_dir: Path) -> list[database.MediaItem]:
-    """Download example media items."""
+    """Download example media items.
+
+    :param data_dir: Data directory to download media items to.
+    :return: List of media items that should be inserted into the database.
+    """
     images = [
         (
             "https://upload.wikimedia.org/wikipedia/commons/0/05/"
@@ -103,7 +107,11 @@ async def download_example_media_items(data_dir: Path) -> list[database.MediaIte
 
 
 async def insert_example_media_items(data_dir: Path, media_items: Sequence[database.MediaItem]) -> None:
-    """Insert example media items into the database."""
+    """Insert example media items into the database.
+
+    :param data_dir: Data directory with downloaded media items.
+    :param media_items: Sequence of media items that should be inserted into the database.
+    """
     sections = [
         database.Section(id=1, order_index=1, name="New York"),
         database.Section(id=2, order_index=0, name="Washington, D.C."),
