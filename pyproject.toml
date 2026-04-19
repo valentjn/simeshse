@@ -12,6 +12,7 @@ build-backend = "uv_build"
 name = "simeshse"
 version = "1.0.0"
 description = "Simple media sharing server"
+readme = "README.md"
 requires-python = ">=3.14"
 dependencies = [
     "aiosqlite>=0.22.1",
