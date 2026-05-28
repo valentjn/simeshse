@@ -4,7 +4,7 @@
 # License, v. 2.0. If a copy of the MPL was not distributed with this
 # file, You can obtain one at https://mozilla.org/MPL/2.0/.
 
-FROM ghcr.io/astral-sh/uv:0.11.16-alpine@sha256:7da939a6c61300a4080e3ef90c9091f6b0b398ff890602e0f769f7557fa6a9a6
+FROM ghcr.io/astral-sh/uv:0.11.17-alpine@sha256:85fabe8ce42f97fd4dff138a1e5bc40f89e726848cfbb37575f78e5a76588ce4
 WORKDIR /app
 RUN apk add --no-cache ffmpeg tzdata
 COPY .python-version pyproject.toml uv.lock ./
